@@ -1,0 +1,11 @@
+﻿# ==========================================================
+# LIMO Program 3: Midpoint Average (Kopanya & Ngatafala)
+# CS3520 Milestone M1 - Visionary Architects
+# ==========================================================
+
+khh r6, r0, 18          # a = 18
+khh r7, r0, 42          # b = 42
+
+kop r8, r6, r7          # sum = 18 + 42 = 60
+khh r9, r0, 1           # shift amount = 1
+ng  r8, r8, r9          # r8 = 60 >> 1 = 30

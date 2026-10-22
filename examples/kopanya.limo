@@ -1,0 +1,13 @@
+﻿# ==========================================================
+# LIMO Program 1: Addition (Kopanya)
+# CS3520 Milestone M1 - Visionary Architects
+# ----------------------------------------------------------
+# Sesotho ISA: kop (kopanya), khh (kopanya hang-hang)
+# ==========================================================
+
+# 1. Initialize inputs into r6 and r7
+khh r6, r0, 25          # r6 = Thuso0 = 25
+khh r7, r0, 17          # r7 = Thuso1 = 17
+
+# 2. Main addition (Kopanya)
+kop r8, r6, r7          # r8 = Nakoana0 = r6 + r7 = 42

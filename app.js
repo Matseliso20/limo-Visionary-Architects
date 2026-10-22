@@ -65,6 +65,62 @@
 
   // Initial Workspace Programs
   const INITIAL_FILES = {
+    'addition_kopanya.limo': {
+      name: 'addition_kopanya.limo',
+      type: 'limo',
+      content: `# ==================================================================
+# CS3520 LIMO Group Project - Milestone M1 Submission
+# Team Visionary Architects (National University of Lesotho)
+# Program 1: Addition (Kopanya). Adds two numbers stored in registers.
+# ==================================================================
+# Inputs: r6 = first number, r7 = second number; output: r8 = sum
+
+# Initialize inputs (r6 = 12, r7 = 25)
+khh r6, r0, 12       # r6 = r0 + 12 = 12 (Thuso0 / a0)
+khh r7, r0, 25       # r7 = r0 + 25 = 25 (Thuso1 / a1)
+
+# Main Addition (Kopanya)
+kop r8, r6, r7       # r8 = r6 + r7 = 37 (Nakoana0 / a0)
+`
+    },
+    'store_constant_boloka.limo': {
+      name: 'store_constant_boloka.limo',
+      type: 'limo',
+      content: `# ==================================================================
+# CS3520 LIMO - Program 2: Store a constant (Boloka palo)
+# Stores a constant in memory using base + offset addressing
+# Inputs: r6 = base value, r2 = stack pointer (Tshupo)
+# ==================================================================
+
+# Set up base values
+khh r6, r0, 5        # r6 = 5 (base value)
+khh r2, r0, 1000     # r2 = 1000 (stack pointer Tshupo)
+
+# Compute and store
+khh r8, r6, 15       # r8 = r6 + 15 = 20 (I-format immediate add)
+blk r8, 4(r2)        # Mem[r2 + 4] = r8 = 20 (S-format store boloka)
+
+# Verify read back
+lt r9, 4(r2)         # r9 = Mem[r2 + 4] = 20 (I-format load lata)
+`
+    },
+    'average_midpoint.limo': {
+      name: 'average_midpoint.limo',
+      type: 'limo',
+      content: `# ==================================================================
+# CS3520 LIMO - Program 3: Simple average (midpoint) of two numbers
+# Adds two numbers and returns their average
+# Inputs: r6 = a, r7 = b; output: r8 = (a + b) >> 1
+# ==================================================================
+
+khh r6, r0, 18       # a = 18 (first input Thuso0)
+khh r7, r0, 42       # b = 42 (second input Thuso1)
+
+kop r8, r6, r7       # r8 = a + b = 60 (R-format add kopanya)
+khh r9, r0, 1        # r9 = 1 (shift amount)
+ng r8, r8, r9        # r8 = r8 >> 1 = 30 (midpoint average)
+`
+    },
     'addition_kopanya.s': {
       name: 'addition_kopanya.s',
       type: 's',
@@ -181,8 +237,8 @@ _start:
 
   const state = {
     files: {},
-    activeFile: 'addition_kopanya.s',
-    openTabs: ['addition_kopanya.s', 'store_constant_boloka.s', 'average_midpoint.s', 'limo_spec_reference.s', 'main.s'],
+    activeFile: 'addition_kopanya.limo',
+    openTabs: ['addition_kopanya.limo', 'store_constant_boloka.limo', 'average_midpoint.limo', 'addition_kopanya.s', 'main.s'],
     activeSidebarTab: 'explorer',
     sidebarOpen: true,
     inspectorOpen: true,
@@ -215,12 +271,15 @@ _start:
   try {
     const saved = localStorage.getItem('limo_studio_files');
     if (saved) {
-      state.files = JSON.parse(saved);
+      state.files = Object.assign({}, INITIAL_FILES, JSON.parse(saved));
     } else {
       state.files = JSON.parse(JSON.stringify(INITIAL_FILES));
     }
   } catch (e) {
     state.files = JSON.parse(JSON.stringify(INITIAL_FILES));
+  }
+  if (!state.files[state.activeFile]) {
+    state.activeFile = Object.keys(state.files)[0] || 'addition_kopanya.limo';
   }
 
   // ==========================================================================
@@ -538,6 +597,32 @@ _start:
   // 6. UI RENDERERS & EVENT HANDLERS
   // ==========================================================================
 
+  // --- Cursor Tracking & Active Line Scrolling ---
+  function updateCursorPos() {
+    const textarea = document.getElementById('codeEditorArea');
+    if (!textarea) return;
+    const text = textarea.value.substr(0, textarea.selectionStart);
+    const lines = text.split('\n');
+    const line = lines.length;
+    const col = lines[lines.length - 1].length + 1;
+    state.cursorPos = { line, col };
+    const badge = document.getElementById('cursorPosBadge');
+    if (badge) badge.textContent = `Ln ${line}, Col ${col}`;
+  }
+
+  function scrollToActiveLine(lineNum) {
+    const textarea = document.getElementById('codeEditorArea');
+    if (!textarea || !lineNum) return;
+    const computedHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--editor-line-height') || '24', 10);
+    const lineHeight = isNaN(computedHeight) || computedHeight <= 0 ? 24 : computedHeight;
+    const targetTop = (lineNum - 1) * lineHeight;
+    const viewHeight = textarea.clientHeight;
+    if (targetTop < textarea.scrollTop || targetTop > textarea.scrollTop + viewHeight - lineHeight * 2) {
+      textarea.scrollTop = Math.max(0, targetTop - Math.floor(viewHeight / 2));
+      syncEditorScroll();
+    }
+  }
+
   // --- Editor & Gutter Rendering ---
   function renderEditor() {
     const textarea = document.getElementById('codeEditorArea');
@@ -588,6 +673,10 @@ _start:
     const bpCount = document.getElementById('breakpointCount');
     if (bpCount) bpCount.textContent = state.breakpoints.size;
     renderBreakpointsList();
+
+    // Ensure synchronized scrolling and cursor tracking
+    syncEditorScroll();
+    updateCursorPos();
   }
 
   // Sync scroll between textarea, overlay, and gutter
@@ -610,7 +699,7 @@ _start:
     container.innerHTML = state.openTabs.map((fileName) => {
       const isActive = fileName === state.activeFile;
       const file = state.files[fileName];
-      const isLimo = fileName.endsWith('.s');
+      const isLimo = fileName.endsWith('.limo') || fileName.endsWith('.s');
 
       return `
         <div class="group flex items-center space-x-2 px-3 py-1.5 rounded-xl text-xs font-mono transition-all cursor-pointer select-none ${
@@ -882,16 +971,15 @@ _start:
     }
 
     if (state.currentStepIndex >= instructions.length) {
-      logTerminal('<span class="text-emerald-400 font-semibold">[Execution Completed]</span> All instructions in program finished. Reset CPU to re-run.');
-      state.activeLineNum = null;
-      renderEditor();
-      showToast('Program Finished Execution', 'success');
-      return;
+      // Auto-reset when user steps past the end to allow re-running cleanly
+      resetCpu();
+      logTerminal('<span class="text-emerald-400 font-semibold">[Program Reset]</span> Automatically reset CPU for new run.');
     }
 
     const current = instructions[state.currentStepIndex];
     state.activeLineNum = current.lineNum;
     renderEditor();
+    scrollToActiveLine(current.lineNum);
 
     const pcHex = '0x' + (state.pc >>> 0).toString(16).padStart(8, '0').toUpperCase();
     const quickPC = document.getElementById('quickPC');
@@ -1112,6 +1200,12 @@ _start:
       return;
     }
 
+    // Automatically reset CPU when re-running or starting a fresh execution
+    const isPausedAtBreakpoint = state.activeLineNum !== null && state.currentStepIndex < instructions.length && state.currentStepIndex > 0;
+    if (!isPausedAtBreakpoint || state.currentStepIndex >= instructions.length) {
+      resetCpu();
+    }
+
     logTerminal(`<span class="text-blue-400 font-semibold">[Assemble & Run: ${state.activeFile}]</span> Assembling RV32I LIMO Session...`);
 
     let cycles = 0;
@@ -1126,6 +1220,7 @@ _start:
         logTerminal(`<span class="text-amber-400 font-bold">[Breakpoint Hit]</span> Stopped at line ${current.lineNum}: <code>${escapeHtml(current.rawText)}</code>`);
         state.activeLineNum = current.lineNum;
         renderEditor();
+        scrollToActiveLine(current.lineNum);
         showToast(`Breakpoint Hit at Line ${current.lineNum}`, 'warn');
         break;
       }
@@ -1177,13 +1272,12 @@ _start:
         logTerminal(`
 <div class="text-zinc-300 space-y-1">
   <div class="font-bold text-white mb-1">Available LIMO Studio CLI Commands:</div>
-  <div><span class="text-emerald-400 font-mono w-28 inline-block">run [file.s]</span> - Assemble and execute assembly program</div>
+  <div><span class="text-emerald-400 font-mono w-28 inline-block">run [file]</span> - Assemble and execute assembly program (.limo or .s)</div>
   <div><span class="text-emerald-400 font-mono w-28 inline-block">step</span> - Step through single instruction (F10)</div>
-  <div><span class="text-emerald-400 font-mono w-28 inline-block">reset</span> - Reset CPU registers, stack, and PC</div>
   <div><span class="text-emerald-400 font-mono w-28 inline-block">ls</span> - List files in current project workspace</div>
-  <div><span class="text-emerald-400 font-mono w-28 inline-block">cat &lt;file.s&gt;</span> - Print source contents of a file</div>
-  <div><span class="text-emerald-400 font-mono w-28 inline-block">touch &lt;file.s&gt;</span> - Create a new assembly file</div>
-  <div><span class="text-emerald-400 font-mono w-28 inline-block">rm &lt;file.s&gt;</span> - Delete an assembly file</div>
+  <div><span class="text-emerald-400 font-mono w-28 inline-block">cat &lt;file&gt;</span> - Print source contents of a file</div>
+  <div><span class="text-emerald-400 font-mono w-28 inline-block">touch &lt;file&gt;</span> - Create a new assembly file (.limo / .s)</div>
+  <div><span class="text-emerald-400 font-mono w-28 inline-block">rm &lt;file&gt;</span> - Delete an assembly file</div>
   <div><span class="text-emerald-400 font-mono w-28 inline-block">limo-encode</span> - Encode LIMO instruction into binary & hex machine code</div>
   <div><span class="text-emerald-400 font-mono w-28 inline-block">limo-translate</span>- Translate active file into RV32I mnemonics</div>
   <div><span class="text-emerald-400 font-mono w-28 inline-block">arch</span> - Show current target CPU architecture</div>
@@ -1229,8 +1323,10 @@ _start:
         if (!args[0]) {
           logTerminal('touch: missing operand', 'error');
         } else {
-          const newName = args[0].endsWith('.s') ? args[0] : `${args[0]}.s`;
-          state.files[newName] = { name: newName, type: 's', content: `# ${newName}\n` };
+          const hasExt = args[0].includes('.');
+          const newName = hasExt ? args[0] : `${args[0]}.limo`;
+          const ext = newName.split('.').pop() || 'limo';
+          state.files[newName] = { name: newName, type: ext, content: `# ${newName}\n` };
           if (!state.openTabs.includes(newName)) state.openTabs.push(newName);
           saveFiles();
           renderTabs();
@@ -1362,6 +1458,14 @@ _start:
     renderTabs();
     renderExplorer();
     renderEditor();
+    const textarea = document.getElementById('codeEditorArea');
+    if (textarea) {
+      textarea.scrollTop = 0;
+      textarea.scrollLeft = 0;
+      textarea.selectionStart = textarea.selectionEnd = 0;
+      syncEditorScroll();
+      updateCursorPos();
+    }
   }
 
   function closeTab(fileName) {
@@ -1410,9 +1514,20 @@ _start:
           saveFiles();
         }
         renderEditor();
+        syncEditorScroll();
+        updateCursorPos();
       });
 
       textarea.addEventListener('scroll', syncEditorScroll);
+
+      // Gutter wheel scroll synchronization
+      const gutter = document.getElementById('editorGutter');
+      if (gutter) {
+        gutter.addEventListener('wheel', (e) => {
+          textarea.scrollTop += e.deltaY;
+          syncEditorScroll();
+        }, { passive: true });
+      }
 
       textarea.addEventListener('keydown', (e) => {
         // Tab indentation
@@ -1458,22 +1573,19 @@ _start:
           e.preventDefault();
           stepInstruction();
         }
+
+        setTimeout(updateCursorPos, 0);
       });
 
-      // Cursor position tracking
+      // Cursor position tracking across all interaction types
       textarea.addEventListener('keyup', updateCursorPos);
       textarea.addEventListener('click', updateCursorPos);
-    }
+      textarea.addEventListener('mouseup', updateCursorPos);
+      textarea.addEventListener('select', updateCursorPos);
+      textarea.addEventListener('focus', updateCursorPos);
 
-    function updateCursorPos() {
-      if (!textarea) return;
-      const text = textarea.value.substr(0, textarea.selectionStart);
-      const lines = text.split('\n');
-      const line = lines.length;
-      const col = lines[lines.length - 1].length + 1;
-      state.cursorPos = { line, col };
-      const badge = document.getElementById('cursorPosBadge');
-      if (badge) badge.textContent = `Ln ${line}, Col ${col}`;
+      // Window resize re-sync
+      window.addEventListener('resize', syncEditorScroll);
     }
 
     function toggleComment() {
@@ -1601,7 +1713,6 @@ _start:
     document.getElementById('menuToggleMinimap')?.addEventListener('click', toggleMinimap);
     document.getElementById('menuRunAll')?.addEventListener('click', runSimulation);
     document.getElementById('menuStepInst')?.addEventListener('click', stepInstruction);
-    document.getElementById('menuResetCpu')?.addEventListener('click', resetCpu);
     document.getElementById('menuOpenWorkbench')?.addEventListener('click', () => switchSidebarTab('workbench'));
 
     // Quick toolbar buttons
@@ -1609,10 +1720,8 @@ _start:
     document.getElementById('btnStep')?.addEventListener('click', stepInstruction);
     document.getElementById('quickRun')?.addEventListener('click', runSimulation);
     document.getElementById('quickStep')?.addEventListener('click', stepInstruction);
-    document.getElementById('quickReset')?.addEventListener('click', resetCpu);
     document.getElementById('btnDebugRun')?.addEventListener('click', runSimulation);
     document.getElementById('btnDebugStep')?.addEventListener('click', stepInstruction);
-    document.getElementById('btnDebugReset')?.addEventListener('click', resetCpu);
 
     // Inspector format toggle
     document.getElementById('btnToggleHexDec')?.addEventListener('click', () => {
@@ -1680,9 +1789,12 @@ _start:
         const reader = new FileReader();
         reader.onload = (event) => {
           const content = event.target.result;
-          state.files[file.name] = { name: file.name, type: 's', content };
+          const ext = file.name.split('.').pop() || 'limo';
+          state.files[file.name] = { name: file.name, type: ext, content };
           if (!state.openTabs.includes(file.name)) state.openTabs.push(file.name);
           saveFiles();
+          renderTabs();
+          renderExplorer();
           switchFile(file.name);
           showToast(`Opened ${file.name}`, 'success');
         };
@@ -1713,14 +1825,25 @@ _start:
       fontSizeSlider.addEventListener('input', () => {
         const sz = fontSizeSlider.value;
         state.fontSize = parseInt(sz, 10);
-        document.documentElement.style.setProperty('--editor-line-height', `${Math.round(state.fontSize * 1.8)}px`);
-        if (textarea) textarea.style.fontSize = `${sz}px`;
+        const lh = Math.round(state.fontSize * 1.8);
+        document.documentElement.style.setProperty('--editor-line-height', `${lh}px`);
+        if (textarea) {
+          textarea.style.fontSize = `${sz}px`;
+          textarea.style.lineHeight = `${lh}px`;
+        }
         const overlay = document.getElementById('highlightOverlay');
-        if (overlay) overlay.style.fontSize = `${sz}px`;
+        if (overlay) {
+          overlay.style.fontSize = `${sz}px`;
+          overlay.style.lineHeight = `${lh}px`;
+        }
         const gutter = document.getElementById('editorGutter');
-        if (gutter) gutter.style.fontSize = `${sz}px`;
+        if (gutter) {
+          gutter.style.fontSize = `${sz}px`;
+          gutter.style.lineHeight = `${lh}px`;
+        }
         const badge = document.getElementById('fontSizeBadge');
         if (badge) badge.textContent = `${sz}px`;
+        syncEditorScroll();
       });
     }
 
@@ -1849,12 +1972,13 @@ _start:
         const input = document.getElementById('newFileNameInput');
         if (!input) return;
         let fname = input.value.trim();
-        if (!fname) fname = 'program.s';
-        if (!fname.endsWith('.s')) fname += '.s';
+        if (!fname) fname = 'program.limo';
+        if (!fname.includes('.')) fname += '.limo';
+        const ext = fname.split('.').pop() || 'limo';
 
         state.files[fname] = {
           name: fname,
-          type: 's',
+          type: ext,
           content: `# ${fname}\n# CS3520 LIMO Session\n\n`
         };
         if (!state.openTabs.includes(fname)) state.openTabs.push(fname);
@@ -2007,8 +2131,7 @@ _start:
   const COMMANDS = [
     { title: 'Assemble & Run Program', shortcut: 'F5', action: () => runSimulation() },
     { title: 'Step Single Instruction', shortcut: 'F10', action: () => stepInstruction() },
-    { title: 'Reset CPU Registers & Stack', shortcut: '', action: () => resetCpu() },
-    { title: 'New Assembly File', shortcut: 'Alt+N', action: () => openNewFileModal() },
+    { title: 'New LIMO / Assembly File', shortcut: 'Alt+N', action: () => openNewFileModal() },
     { title: 'Save Current File', shortcut: 'Ctrl+S', action: () => { saveFiles(); showToast('Saved', 'success'); } },
     { title: 'Open Local File', shortcut: 'Ctrl+O', action: () => openLocalFileDialog() },
     { title: 'Export ASM to File', shortcut: '', action: () => exportCurrentFile() },
@@ -2081,7 +2204,7 @@ _start:
     const input = document.getElementById('newFileNameInput');
     if (!modal || !input) return;
     modal.classList.remove('hidden');
-    input.value = 'program.s';
+    input.value = 'program.limo';
     input.focus();
     input.select();
   }
@@ -2114,6 +2237,7 @@ _start:
         if (isDragging) {
           isDragging = false;
           document.body.style.cursor = 'default';
+          syncEditorScroll();
         }
       });
     }
@@ -2139,6 +2263,7 @@ _start:
         if (isDragging) {
           isDragging = false;
           document.body.style.cursor = 'default';
+          syncEditorScroll();
         }
       });
     }
@@ -2164,6 +2289,7 @@ _start:
         if (isDragging) {
           isDragging = false;
           document.body.style.cursor = 'default';
+          syncEditorScroll();
         }
       });
     }
