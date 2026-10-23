@@ -1,0 +1,17 @@
+﻿# ==========================================================
+# LIMO Program 2: Store a Constant (Boloka Palo)
+# CS3520 Milestone M1 - Visionary Architects
+# ----------------------------------------------------------
+# Sesotho ISA: khh, blk (boloka), lt (lata)
+# ==========================================================
+
+# 1. Set up base and stack values
+khh r6, r0, 100         # r6 = base value 100
+khh r2, r0, 1000        # r2 = stack pointer (Tshupo)
+
+# 2. Add constant and store in memory (Boloka)
+khh r8, r6, 15          # r8 = 100 + 15 = 115
+blk r8, 4(r2)           # Mem[r2 + 4] = r8 = 115
+
+# 3. Read back to verify (Lata)
+lt  r9, 4(r2)           # r9 = Mem[r2 + 4] = 115
