@@ -7,7 +7,7 @@
 For **Milestone 1 (M1)**, our focus is strictly on establishing the core architecture foundation:
 * **ISA Specification (A1–A5):** Defining fixed 32-bit instruction formats ($R$, $I$, $S$, $B$), register file mappings with Sesotho names (e.g., `Ha ho letho` for zero), and assembly mnemonics.
 * **Design-Decision Log (A6):** Documenting trade-off analyses on register count, microarchitectural registers, branch resolution stages, and load-use stalls.
-* **Initial Programs:** Hand encoding three benchmark Sesotho assembly programs into binary and hexadecimal formats.
+* **Initial Programs:** Hand-encoding three benchmark Sesotho assembly programs into binary and hexadecimal formats.
 * **Repository Setup:** Configuring protected branches, team roles, and issue tracking boards.
 
 ---
@@ -24,7 +24,7 @@ The project is designed and developed by a group of seven collaborators assigned
 | **Khobatha Setetemela** | `@khobatha` | - | Course Coordinator & Project Advisor |
 | **Liposo Ranoka** | `@Liposo-Ranoka` | 202400088 | Student Collaborator |
 | **Matseliso Kheola** | `@Matseliso20` | 202202304 | Student Collaborator |
-| **Tumo Tsehla** | `@tsehlatumo-ops` | 202400550 | Student Collaborator |
+| **Tumo Ts'ehla** | `@tsehlatumo-ops` | 202400550 | Student Collaborator |
 | **Thaane Moletsane** | `@THMN123` | 202322687 | Student Collaborator |
 
 ## 3. Team Roles & Weekly Rotation Schedule
@@ -50,6 +50,6 @@ limo-group-project/
 ├── examples/           
 ├── src/                  
 ├── tests/               
-├── AI_USE.md            
+├── AI_USE.md      
 └── README.md             
-```
+
